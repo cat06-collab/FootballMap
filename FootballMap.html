@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mappa dei Miei Campi di Calcio</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #22c55e;
+            --accent-hover: #16a34a;
+            --border-color: #334155;
+            --card-bg: #0f172a;
+        }
+
+        .theme-light {
+            --bg-color: #f1f5f9;
+            --panel-bg: #ffffff;
+            --text-color: #0f172a;
+            --accent-color: #16a34a;
+            --accent-hover: #15803d;
+            --border-color: #e2e8f0;
+            --card-bg: #f8fafc;
+        }
+
+        .theme-green {
+            --bg-color: #064e3b;
+            --panel-bg: #047857;
+            --text-color: #ecfdf5;
+            --accent-color: #f59e0b;
+            --accent-hover: #d97706;
+            --border-color: #065f46;
+            --card-bg: #064e3b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 380px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            width: 34px;
+            height: 34px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .icon-btn:hover {
+            background-color: var(--border-color);
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 15px 20px;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .stat-item .val {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .stat-item .lbl {
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+
+        .controls-bar {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        .filters {
+            display: flex;
+            gap: 8px;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        /* Form Area */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        input[type="text"], input[type="date"], input[type="number"], textarea {
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            background-color: var(--accent-color);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--border-color);
+        }
+
+        /* List view */
+        .pitch-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .pitch-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .pitch-card:hover {
+            border-color: var(--accent-color);
+        }
+
+        .pitch-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .pitch-card-meta {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-top: 4px;
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Map Container */
+        #map {
+            flex: 1;
+            height: 100%;
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--panel-bg);
+            border-radius: 8px;
+            padding: 20px;
+            width: 400px;
+            max-width: 90%;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .custom-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        .result-badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .badge-win { background-color: #22c55e; color: white; }
+        .badge-draw { background-color: #eab308; color: black; }
+        .badge-loss { background-color: #ef4444; color: white; }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-size: 0.9rem;
+        }
+
+        .tab.active {
+            border-bottom-color: var(--accent-color);
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div class="header">
+            <h1><i class="fa-solid fa-futbol"></i> I Miei Campi</h1>
+            <div class="header-actions">
+                <button class="icon-btn" onclick="toggleTheme()" title="Cambia Tema"><i class="fa-solid fa-palette"></i></button>
+                <button class="icon-btn" onclick="openSettingsModal()" title="Personalizza Stile Mappa"><i class="fa-solid fa-gear"></i></button>
+            </div>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="val" id="stat-total">0</div>
+                <div class="lbl">Campi</div>
+            </div>
+            <div class="stat-item">
+                <div class="val" id="stat-wins">0</div>
+                <div class="lbl">Vittorie</div>
+            </div>
+            <div class="stat-item">
+                <div class="val" id="stat-goals">0</div>
+                <div class="lbl">Gol Fatti</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('add')">Aggiungi Campo</div>
+            <div class="tab" onclick="switchTab('list')">Elenco Campi</div>
+        </div>
+
+        <div class="content-area" id="tab-add">
+            <form id="pitchForm">
+                <div class="form-group">
+                    <label>Nome Campo / Stadio *</label>
+                    <input type="text" id="pitchName" required placeholder="Es. Stadio San Siro">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Città *</label>
+                        <input type="text" id="pitchCity" required placeholder="Es. Milano">
+                    </div>
+                    <div class="form-group">
+                        <label>Superficie</label>
+                        <select id="pitchSurface">
+                            <option value="Sintetico">Erba Sintetica</option>
+                            <option value="Naturale">Erba Naturale</option>
+                            <option value="Terra">Terra Battuta</option>
+                            <option value="Indoor">Indoor / Parquet</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data Partita</label>
+                        <input type="date" id="matchDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Casa/Trasferta</label>
+                        <select id="homeAway">
+                            <option value="Away">Trasferta</option>
+                            <option value="Home">Casa</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Squadra Avversaria</label>
+                        <input type="text" id="opponent" placeholder="Es. FC Rivali">
+                    </div>
+                    <div class="form-group">
+                        <label>Risultato (Gol Tuoi - Loro)</label>
+                        <div style="display:flex; gap:5px;">
+                            <input type="number" id="goalsFor" placeholder="0" min="0" style="width:50%;">
+                            <input type="number" id="goalsAgainst" placeholder="0" min="0" style="width:50%;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Posizione (Lat, Lng) *</label>
+                    <div style="display:flex; gap:5px;">
+                        <input type="text" id="coords" required placeholder="Clicca sulla mappa per impostare" readonly>
+                        <button type="button" class="btn btn-secondary" onclick="useCurrentLocation()" title="Usa GPS"><i class="fa-solid fa-location-crosshairs"></i></button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Note / Ricordi</label>
+                    <textarea id="pitchNotes" rows="3" placeholder="Com'era il campo? Aneddoti della partita..."></textarea>
+                </div>
+
+                <button type="submit" class="btn"><i class="fa-solid fa-plus"></i> Salva Campo</button>
+            </form>
+        </div>
+
+        <div class="content-area" id="tab-list" style="display:none;">
+            <div class="controls-bar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Cerca stadio o città..." oninput="filterPitches()">
+                </div>
+                <div class="filters">
+                    <select id="surfaceFilter" onchange="filterPitches()">
+                        <option value="">Tutti i fondi</option>
+                        <option value="Sintetico">Sintetico</option>
+                        <option value="Naturale">Naturale</option>
+                        <option value="Terra">Terra</option>
+                        <option value="Indoor">Indoor</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="toggleRouteLine()"><i class="fa-solid fa-route"></i> Percorso</button>
+                </div>
+            </div>
+            <div class="pitch-list" id="pitchList"></div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Modal Impostazioni Mappa -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <h2><i class="fa-solid fa-sliders"></i> Personalizza Mappa</h2>
+            
+            <div class="form-group">
+                <label>Stile Mappa</label>
+                <select id="mapStyleSelect" onchange="changeMapProvider()">
+                    <option value="osm">OpenStreetMap Standard (Gratuito)</option>
+                    <option value="carto-dark">CartoDB Dark (Scuro)</option>
+                    <option value="carto-light">CartoDB Positron (Chiaro)</option>
+                    <option value="mapbox-streets">Mapbox Streets (Richiede Key)</option>
+                    <option value="mapbox-satellite">Mapbox Satellite (Richiede Key)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="apiKeyGroup" style="display:none;">
+                <label>API Key Mapbox</label>
+                <input type="text" id="apiKeyInput" placeholder="pk.eyJ1Ijo...">
+            </div>
+
+            <div class="form-group">
+                <label>Icona Marker</label>
+                <select id="markerIconSelect" onchange="updateCustomization()">
+                    <option value="fa-futbol">Pallone da Calcio</option>
+                    <option value="fa-location-dot">Segnaposto Classico</option>
+                    <option value="fa-trophy">Coppa / Trofeo</option>
+                    <option value="fa-star">Stella</option>
+                    <option value="fa-shirt">Maglia da Gioco</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Colore Marker</label>
+                    <input type="color" id="markerColorInput" value="#22c55e" onchange="updateCustomization()">
+                </div>
+                <div class="form-group">
+                    <label>Colore Percorso</label>
+                    <input type="color" id="lineColorInput" value="#3b82f6" onchange="updateCustomization()">
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; margin-top:10px;">
+                <button class="btn btn-secondary" onclick="exportData()"><i class="fa-solid fa-download"></i> Esporta JSON</button>
+                <button class="btn btn-secondary" onclick="importData()"><i class="fa-solid fa-upload"></i> Importa JSON</button>
+            </div>
+
+            <button class="btn" onclick="closeSettingsModal()" style="margin-top:10px;">Chiudi</button>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Configurazione e Stato
+        let map;
+        let currentTileLayer;
+        let markers = [];
+        let routePolyline = null;
+        let showRoute = false;
+
+        let pitches = JSON.parse(localStorage.getItem('my_pitches')) || [
+            {
+                id: '1',
+                name: 'Stadio Giuseppe Meazza',
+                city: 'Milano',
+                surface: 'Naturale',
+                date: '2024-05-12',
+                homeAway: 'Away',
+                opponent: 'FC Inter',
+                goalsFor: 2,
+                goalsAgainst: 1,
+                lat: 45.4781,
+                lng: 9.1240,
+                notes: 'Partita indimenticabile, grande vittoria in trasferta!'
+            }
+        ];
+
+        let config = JSON.parse(localStorage.getItem('map_config')) || {
+            provider: 'osm',
+            apiKey: '',
+            markerIcon: 'fa-futbol',
+            markerColor: '#22c55e',
+            lineColor: '#3b82f6',
+            theme: 'dark'
+        };
+
+        // Inizializzazione App
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            applyTheme(config.theme);
+            renderPitches();
+            updateStats();
+
+            // Click su mappa per impostare coordinate
+            map.on('click', (e) => {
+                const { lat, lng } = e.latlng;
+                document.getElementById('coords').value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                switchTab('add');
+            });
+
+            // Form Submit
+            document.getElementById('pitchForm').addEventListener('submit', handleFormSubmit);
+        });
+
+        // 1. INIZIALIZZAZIONE MAPPA CON OPENSTREETMAP PREDEFINITO (OPZIONE A)
+        function initMap() {
+            map = L.map('map').setView([41.9028, 12.4964], 6); // Centrato sull'Italia
+            loadTileLayer();
+        }
+
+        function loadTileLayer() {
+            if (currentTileLayer) map.removeLayer(currentTileLayer);
+
+            let url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+            let attr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+            if (config.provider === 'carto-dark') {
+                url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+                attr = '&copy; OpenStreetMap &copy; CARTO';
+            } else if (config.provider === 'carto-light') {
+                url = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+                attr = '&copy; OpenStreetMap &copy; CARTO';
+            } else if (config.provider.startsWith('mapbox')) {
+                if (config.apiKey) {
+                    const style = config.provider === 'mapbox-satellite' ? 'satellite-v9' : 'streets-v11';
+                    url = `https://api.mapbox.com/styles/v1/mapbox/${style}/tiles/{z}/{x}/{y}?access_token=${config.apiKey}`;
+                    attr = '&copy; Mapbox &copy; OpenStreetMap';
+                }
+            }
+
+            currentTileLayer = L.tileLayer(url, {
+                attribution: attr,
+                maxZoom: 19
+            }).addTo(map);
+        }
+
+        function renderPitches() {
+            // Rimuovi vecchi marker
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            const filteredPitches = getFilteredPitches();
+
+            filteredPitches.forEach(pitch => {
+                const markerIcon = L.divIcon({
+                    className: 'custom-icon',
+                    html: `<div class="custom-marker" style="background-color:${config.markerColor}; width:32px; height:32px; border-radius:50%; border:2px solid white;"><i class="fa-solid ${config.markerIcon}"></i></div>`,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                });
+
+                const resultBadge = getResultBadge(pitch.goalsFor, pitch.goalsAgainst);
+
+                const popupContent = `
+                    <div style="color:#000;">
+                        <h3 style="margin-bottom:5px;">${pitch.name}</h3>
+                        <p><b>Città:</b> ${pitch.city} (${pitch.surface})</p>
+                        ${pitch.date ? `<p><b>Data:</b> ${pitch.date}</p>` : ''}
+                        ${pitch.opponent ? `<p><b>vs ${pitch.opponent}</b> (${pitch.homeAway === 'Home' ? 'Casa' : 'Trasferta'})</p>` : ''}
+                        ${pitch.goalsFor !== null && pitch.goalsFor !== undefined ? `<p><b>Risultato:</b> ${pitch.goalsFor} - ${pitch.goalsAgainst} ${resultBadge}</p>` : ''}
+                        ${pitch.notes ? `<p style="margin-top:5px; font-style:italic;">"${pitch.notes}"</p>` : ''}
+                        <button onclick="deletePitch('${pitch.id}')" style="margin-top:8px; color:red; background:none; border:none; cursor:pointer;"><i class="fa-solid fa-trash"></i> Elimina</button>
+                    </div>
+                `;
+
+                const marker = L.marker([pitch.lat, pitch.lng], { icon: markerIcon })
+                    .bindPopup(popupContent)
+                    .addTo(map);
+
+                markers.push(marker);
+            });
+
+            renderList(filteredPitches);
+            updateRoute();
+        }
+
+        function getFilteredPitches() {
+            const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+            const surface = document.getElementById('surfaceFilter')?.value || '';
+
+            return pitches.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(search) || p.city.toLowerCase().includes(search);
+                const matchesSurface = surface === '' || p.surface === surface;
+                return matchesSearch && matchesSurface;
+            });
+        }
+
+        function renderList(list) {
+            const container = document.getElementById('pitchList');
+            container.innerHTML = '';
+
+            if (list.length === 0) {
+                container.innerHTML = '<p style="text-align:center; opacity:0.6; padding:20px;">Nessun campo trovato</p>';
+                return;
+            }
+
+            list.forEach(pitch => {
+                const card = document.createElement('div');
+                card.className = 'pitch-card';
+                card.onclick = () => {
+                    map.flyTo([pitch.lat, pitch.lng], 14);
+                };
+
+                const badge = getResultBadge(pitch.goalsFor, pitch.goalsAgainst);
+
+                card.innerHTML = `
+                    <div class="pitch-card-header">
+                        <span>${pitch.name}</span>
+                        ${badge}
+                    </div>
+                    <div class="pitch-card-meta">
+                        <span><i class="fa-solid fa-location-dot"></i> ${pitch.city}</span>
+                        <span><i class="fa-solid fa-layer-group"></i> ${pitch.surface}</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function getResultBadge(gf, ga) {
+            if (gf === null || ga === null || gf === undefined || ga === undefined || gf === '') return '';
+            if (gf > ga) return '<span class="result-badge badge-win">VITTORIA</span>';
+            if (gf === ga) return '<span class="result-badge badge-draw">PAREGGIO</span>';
+            return '<span class="result-badge badge-loss">SCONFITTA</span>';
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const coordsStr = document.getElementById('coords').value;
+            if (!coordsStr) return alert("Seleziona una posizione sulla mappa!");
+
+            const [lat, lng] = coordsStr.split(',').map(n => parseFloat(n.trim()));
+
+            const newPitch = {
+                id: Date.now().toString(),
+                name: document.getElementById('pitchName').value,
+                city: document.getElementById('pitchCity').value,
+                surface: document.getElementById('pitchSurface').value,
+                date: document.getElementById('matchDate').value,
+                homeAway: document.getElementById('homeAway').value,
+                opponent: document.getElementById('opponent').value,
+                goalsFor: document.getElementById('goalsFor').value !== '' ? parseInt(document.getElementById('goalsFor').value) : null,
+                goalsAgainst: document.getElementById('goalsAgainst').value !== '' ? parseInt(document.getElementById('goalsAgainst').value) : null,
+                lat,
+                lng,
+                notes: document.getElementById('pitchNotes').value
+            };
+
+            pitches.push(newPitch);
+            saveData();
+            renderPitches();
+            updateStats();
+            document.getElementById('pitchForm').reset();
+            switchTab('list');
+        }
+
+        function deletePitch(id) {
+            pitches = pitches.filter(p => p.id !== id);
+            saveData();
+            renderPitches();
+            updateStats();
+        }
+
+        function toggleRouteLine() {
+            showRoute = !showRoute;
+            updateRoute();
+        }
+
+        function updateRoute() {
+            if (routePolyline) map.removeLayer(routePolyline);
+
+            if (showRoute) {
+                const sortedPitches = [...pitches].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+                const latLngs = sortedPitches.map(p => [p.lat, p.lng]);
+
+                routePolyline = L.polyline(latLngs, {
+                    color: config.lineColor,
+                    dashArray: '8, 8',
+                    weight: 3
+                }).addTo(map);
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('stat-total').innerText = pitches.length;
+            const wins = pitches.filter(p => p.goalsFor > p.goalsAgainst).length;
+            document.getElementById('stat-wins').innerText = wins;
+            const goals = pitches.reduce((sum, p) => sum + (p.goalsFor || 0), 0);
+            document.getElementById('stat-goals').innerText = goals;
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-add').style.display = tab === 'add' ? 'block' : 'none';
+            document.getElementById('tab-list').style.display = tab === 'list' ? 'block' : 'none';
+            event?.target?.classList.add('active');
+        }
+
+        function useCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    const { latitude, longitude } = pos.coords;
+                    document.getElementById('coords').value = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+                    map.flyTo([latitude, longitude], 13);
+                });
+            }
+        }
+
+        function filterPitches() {
+            renderPitches();
+        }
+
+        function saveData() {
+            localStorage.setItem('my_pitches', JSON.stringify(pitches));
+            localStorage.setItem('map_config', JSON.stringify(config));
+        }
+
+        // Modale & Stili
+        function openSettingsModal() {
+            document.getElementById('mapStyleSelect').value = config.provider;
+            document.getElementById('apiKeyInput').value = config.apiKey || '';
+            document.getElementById('markerIconSelect').value = config.markerIcon;
+            document.getElementById('markerColorInput').value = config.markerColor;
+            document.getElementById('lineColorInput').value = config.lineColor;
+            document.getElementById('apiKeyGroup').style.display = config.provider.startsWith('mapbox') ? 'block' : 'none';
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function changeMapProvider() {
+            const provider = document.getElementById('mapStyleSelect').value;
+            config.provider = provider;
+            document.getElementById('apiKeyGroup').style.display = provider.startsWith('mapbox') ? 'block' : 'none';
+            saveData();
+            loadTileLayer();
+        }
+
+        function updateCustomization() {
+            config.markerIcon = document.getElementById('markerIconSelect').value;
+            config.markerColor = document.getElementById('markerColorInput').value;
+            config.lineColor = document.getElementById('lineColorInput').value;
+            config.apiKey = document.getElementById('apiKeyInput').value;
+            saveData();
+            renderPitches();
+        }
+
+        function toggleTheme() {
+            config.theme = config.theme === 'dark' ? 'light' : config.theme === 'light' ? 'green' : 'dark';
+            applyTheme(config.theme);
+            saveData();
+        }
+
+        function applyTheme(theme) {
+            document.body.className = theme === 'light' ? 'theme-light' : theme === 'green' ? 'theme-green' : '';
+        }
+
+        function exportData() {
+            const blob = new Blob([JSON.stringify(pitches, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'i-miei-campi.json';
+            a.click();
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        pitches = JSON.parse(event.target.result);
+                        saveData();
+                        renderPitches();
+                        updateStats();
+                        closeSettingsModal();
+                    } catch (err) {
+                        alert('File non valido!');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+    </script>
+</body>
+</html>
