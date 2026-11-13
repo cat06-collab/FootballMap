@@ -4,12 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mappa dei Miei Campi di Calcio</title>
-    <!-- Collegamento al Manifest per Android e PWA -->
-    <link rel="manifest" href="manifest-campi.json">
-    <!-- Icona per dispositivi Apple (iOS) -->
-    <link rel="apple-touch-icon" href="icona-campo-calcio.png">
-    <!-- Colore della barra del browser mobile -->
-    <meta name="theme-color" content="#22c55e">
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- FontAwesome icons -->
@@ -204,6 +198,35 @@
             font-size: 0.9rem;
         }
 
+        input[type="color"] {
+            width: 45px;
+            height: 36px;
+            padding: 2px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            cursor: pointer;
+        }
+
+        .color-presets {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .color-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+
+        .color-dot:hover {
+            transform: scale(1.15);
+        }
+
         .btn {
             padding: 10px 15px;
             border: none;
@@ -259,14 +282,64 @@
             justify-content: space-between;
             align-items: center;
             font-weight: bold;
+            gap: 8px;
+        }
+
+        .pitch-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pin-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            border: 1px solid rgba(255,255,255,0.6);
+            flex-shrink: 0;
         }
 
         .pitch-card-meta {
             font-size: 0.8rem;
             opacity: 0.8;
-            margin-top: 4px;
+            margin-top: 6px;
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
+            align-items: center;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-color);
+            justify-content: flex-end;
+        }
+
+        .small-action-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: 0.2s;
+        }
+
+        .small-action-btn:hover {
+            background-color: var(--border-color);
+        }
+
+        .small-action-btn.delete:hover {
+            border-color: #ef4444;
+            color: #ef4444;
         }
 
         /* Map Container */
@@ -315,6 +388,7 @@
             border-radius: 4px;
             font-size: 0.75rem;
             font-weight: bold;
+            white-space: nowrap;
         }
 
         .badge-win { background-color: #22c55e; color: white; }
@@ -337,6 +411,19 @@
             border-bottom-color: var(--accent-color);
             font-weight: bold;
             color: var(--accent-color);
+        }
+
+        .edit-banner {
+            background-color: rgba(245, 158, 11, 0.15);
+            border: 1px solid #f59e0b;
+            color: #fbbf24;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -367,12 +454,19 @@
         </div>
 
         <div class="tabs">
-            <div class="tab active" onclick="switchTab('add')">Aggiungi Campo</div>
-            <div class="tab" onclick="switchTab('list')">Elenco Campi</div>
+            <div class="tab active" id="tab-btn-add" onclick="switchTab('add')">Aggiungi Campo</div>
+            <div class="tab" id="tab-btn-list" onclick="switchTab('list')">Elenco Campi</div>
         </div>
 
         <div class="content-area" id="tab-add">
+            <div class="edit-banner" id="editBanner">
+                <span><i class="fa-solid fa-pen"></i> Modifica campo in corso</span>
+                <button type="button" onclick="cancelEdit()" style="background:none; border:none; color:inherit; text-decoration:underline; cursor:pointer; font-size:0.8rem;">Annulla</button>
+            </div>
+
             <form id="pitchForm">
+                <input type="hidden" id="editingPitchId" value="">
+
                 <div class="form-group">
                     <label>Nome Campo / Stadio *</label>
                     <input type="text" id="pitchName" required placeholder="Es. Stadio San Siro">
@@ -423,6 +517,19 @@
                 </div>
 
                 <div class="form-group">
+                    <label>Colore Puntina</label>
+                    <div class="color-presets">
+                        <input type="color" id="pinColor" value="#22c55e" title="Scegli colore personalizzato">
+                        <span class="color-dot" style="background-color:#22c55e;" onclick="setPinColor('#22c55e')" title="Verde"></span>
+                        <span class="color-dot" style="background-color:#3b82f6;" onclick="setPinColor('#3b82f6')" title="Blu"></span>
+                        <span class="color-dot" style="background-color:#ef4444;" onclick="setPinColor('#ef4444')" title="Rosso"></span>
+                        <span class="color-dot" style="background-color:#f59e0b;" onclick="setPinColor('#f59e0b')" title="Arancione"></span>
+                        <span class="color-dot" style="background-color:#a855f7;" onclick="setPinColor('#a855f7')" title="Viola"></span>
+                        <span class="color-dot" style="background-color:#ec4899;" onclick="setPinColor('#ec4899')" title="Rosa"></span>
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label>Posizione (Lat, Lng) *</label>
                     <div style="display:flex; gap:5px;">
                         <input type="text" id="coords" required placeholder="Clicca sulla mappa per impostare" readonly>
@@ -435,7 +542,10 @@
                     <textarea id="pitchNotes" rows="3" placeholder="Com'era il campo? Aneddoti della partita..."></textarea>
                 </div>
 
-                <button type="submit" class="btn"><i class="fa-solid fa-plus"></i> Salva Campo</button>
+                <div style="display:flex; gap:8px;">
+                    <button type="submit" class="btn" id="submitBtn" style="flex:1;"><i class="fa-solid fa-plus"></i> Salva Campo</button>
+                    <button type="button" class="btn btn-secondary" id="cancelEditBtn" onclick="cancelEdit()" style="display:none;">Annulla</button>
+                </div>
             </form>
         </div>
 
@@ -495,7 +605,7 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label>Colore Marker</label>
+                    <label>Colore Puntina Predefinito</label>
                     <input type="color" id="markerColorInput" value="#22c55e" onchange="updateCustomization()">
                 </div>
                 <div class="form-group">
@@ -535,6 +645,7 @@
                 opponent: 'FC Inter',
                 goalsFor: 2,
                 goalsAgainst: 1,
+                color: '#22c55e',
                 lat: 45.4781,
                 lng: 9.1240,
                 notes: 'Partita indimenticabile, grande vittoria in trasferta!'
@@ -554,6 +665,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
             applyTheme(config.theme);
+            document.getElementById('pinColor').value = config.markerColor;
             renderPitches();
             updateStats();
 
@@ -568,7 +680,11 @@
             document.getElementById('pitchForm').addEventListener('submit', handleFormSubmit);
         });
 
-        // 1. INIZIALIZZAZIONE MAPPA CON OPENSTREETMAP PREDEFINITO (OPZIONE A)
+        function setPinColor(hex) {
+            document.getElementById('pinColor').value = hex;
+        }
+
+        // 1. INIZIALIZZAZIONE MAPPA CON OPENSTREETMAP PREDEFINITO
         function initMap() {
             map = L.map('map').setView([41.9028, 12.4964], 6); // Centrato sull'Italia
             loadTileLayer();
@@ -578,19 +694,19 @@
             if (currentTileLayer) map.removeLayer(currentTileLayer);
 
             let url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-            let attr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+            let attr = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
             if (config.provider === 'carto-dark') {
                 url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-                attr = '&copy; OpenStreetMap &copy; CARTO';
+                attr = '© OpenStreetMap © CARTO';
             } else if (config.provider === 'carto-light') {
                 url = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-                attr = '&copy; OpenStreetMap &copy; CARTO';
+                attr = '© OpenStreetMap © CARTO';
             } else if (config.provider.startsWith('mapbox')) {
                 if (config.apiKey) {
                     const style = config.provider === 'mapbox-satellite' ? 'satellite-v9' : 'streets-v11';
                     url = `https://api.mapbox.com/styles/v1/mapbox/${style}/tiles/{z}/{x}/{y}?access_token=${config.apiKey}`;
-                    attr = '&copy; Mapbox &copy; OpenStreetMap';
+                    attr = '© Mapbox © OpenStreetMap';
                 }
             }
 
@@ -608,9 +724,11 @@
             const filteredPitches = getFilteredPitches();
 
             filteredPitches.forEach(pitch => {
+                const pinColor = pitch.color || config.markerColor;
+
                 const markerIcon = L.divIcon({
                     className: 'custom-icon',
-                    html: `<div class="custom-marker" style="background-color:${config.markerColor}; width:32px; height:32px; border-radius:50%; border:2px solid white;"><i class="fa-solid ${config.markerIcon}"></i></div>`,
+                    html: `<div class="custom-marker" style="background-color:${pinColor}; width:32px; height:32px; border-radius:50%; border:2px solid white;"><i class="fa-solid ${config.markerIcon}"></i></div>`,
                     iconSize: [32, 32],
                     iconAnchor: [16, 16]
                 });
@@ -618,14 +736,17 @@
                 const resultBadge = getResultBadge(pitch.goalsFor, pitch.goalsAgainst);
 
                 const popupContent = `
-                    <div style="color:#000;">
+                    <div style="color:#000; min-width:180px;">
                         <h3 style="margin-bottom:5px;">${pitch.name}</h3>
                         <p><b>Città:</b> ${pitch.city} (${pitch.surface})</p>
-                        ${pitch.date ? `<p><b>Data:</b> ${pitch.date}</p>` : ''}
+                        ${pitch.date ? `<p><b>Data:</b> ${formatDateIT(pitch.date)}</p>` : ''}
                         ${pitch.opponent ? `<p><b>vs ${pitch.opponent}</b> (${pitch.homeAway === 'Home' ? 'Casa' : 'Trasferta'})</p>` : ''}
                         ${pitch.goalsFor !== null && pitch.goalsFor !== undefined ? `<p><b>Risultato:</b> ${pitch.goalsFor} - ${pitch.goalsAgainst} ${resultBadge}</p>` : ''}
                         ${pitch.notes ? `<p style="margin-top:5px; font-style:italic;">"${pitch.notes}"</p>` : ''}
-                        <button onclick="deletePitch('${pitch.id}')" style="margin-top:8px; color:red; background:none; border:none; cursor:pointer;"><i class="fa-solid fa-trash"></i> Elimina</button>
+                        <div style="display:flex; gap:12px; margin-top:10px; padding-top:6px; border-top:1px solid #ddd;">
+                            <button onclick="editPitch('${pitch.id}')" style="color:#2563eb; background:none; border:none; cursor:pointer; font-weight:bold;"><i class="fa-solid fa-pen"></i> Modifica</button>
+                            <button onclick="deletePitch('${pitch.id}')" style="color:#dc2626; background:none; border:none; cursor:pointer;"><i class="fa-solid fa-trash"></i> Elimina</button>
+                        </div>
                     </div>
                 `;
 
@@ -651,6 +772,13 @@
             });
         }
 
+        function formatDateIT(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
         function renderList(list) {
             const container = document.getElementById('pitchList');
             container.innerHTML = '';
@@ -660,7 +788,15 @@
                 return;
             }
 
-            list.forEach(pitch => {
+            // Ordina dalla partita più recente alla meno recente (i campi senza data vanno in fondo)
+            const sortedList = [...list].sort((a, b) => {
+                if (!a.date && !b.date) return 0;
+                if (!a.date) return 1;
+                if (!b.date) return -1;
+                return new Date(b.date) - new Date(a.date);
+            });
+
+            sortedList.forEach(pitch => {
                 const card = document.createElement('div');
                 card.className = 'pitch-card';
                 card.onclick = () => {
@@ -668,15 +804,28 @@
                 };
 
                 const badge = getResultBadge(pitch.goalsFor, pitch.goalsAgainst);
+                const pinColor = pitch.color || config.markerColor;
 
                 card.innerHTML = `
                     <div class="pitch-card-header">
-                        <span>${pitch.name}</span>
+                        <div class="pitch-title-wrap">
+                            <span class="pin-indicator" style="background-color:${pinColor};"></span>
+                            <span>${pitch.name}</span>
+                        </div>
                         ${badge}
                     </div>
                     <div class="pitch-card-meta">
                         <span><i class="fa-solid fa-location-dot"></i> ${pitch.city}</span>
                         <span><i class="fa-solid fa-layer-group"></i> ${pitch.surface}</span>
+                        ${pitch.date ? `<span><i class="fa-regular fa-calendar"></i> ${formatDateIT(pitch.date)}</span>` : ''}
+                    </div>
+                    <div class="card-actions">
+                        <button type="button" class="small-action-btn" onclick="event.stopPropagation(); editPitch('${pitch.id}')">
+                            <i class="fa-solid fa-pen"></i> Modifica
+                        </button>
+                        <button type="button" class="small-action-btn delete" onclick="event.stopPropagation(); deletePitch('${pitch.id}')">
+                            <i class="fa-solid fa-trash"></i> Elimina
+                        </button>
                     </div>
                 `;
                 container.appendChild(card);
@@ -696,9 +845,10 @@
             if (!coordsStr) return alert("Seleziona una posizione sulla mappa!");
 
             const [lat, lng] = coordsStr.split(',').map(n => parseFloat(n.trim()));
+            const editingId = document.getElementById('editingPitchId').value;
 
-            const newPitch = {
-                id: Date.now().toString(),
+            const pitchData = {
+                id: editingId || Date.now().toString(),
                 name: document.getElementById('pitchName').value,
                 city: document.getElementById('pitchCity').value,
                 surface: document.getElementById('pitchSurface').value,
@@ -707,20 +857,74 @@
                 opponent: document.getElementById('opponent').value,
                 goalsFor: document.getElementById('goalsFor').value !== '' ? parseInt(document.getElementById('goalsFor').value) : null,
                 goalsAgainst: document.getElementById('goalsAgainst').value !== '' ? parseInt(document.getElementById('goalsAgainst').value) : null,
+                color: document.getElementById('pinColor').value,
                 lat,
                 lng,
                 notes: document.getElementById('pitchNotes').value
             };
 
-            pitches.push(newPitch);
+            if (editingId) {
+                const index = pitches.findIndex(p => p.id === editingId);
+                if (index !== -1) {
+                    pitches[index] = pitchData;
+                }
+            } else {
+                pitches.push(pitchData);
+            }
+
             saveData();
             renderPitches();
             updateStats();
-            document.getElementById('pitchForm').reset();
+            resetFormState();
             switchTab('list');
         }
 
+        function editPitch(id) {
+            const pitch = pitches.find(p => p.id === id);
+            if (!pitch) return;
+
+            map.closePopup();
+
+            document.getElementById('editingPitchId').value = pitch.id;
+            document.getElementById('pitchName').value = pitch.name;
+            document.getElementById('pitchCity').value = pitch.city;
+            document.getElementById('pitchSurface').value = pitch.surface;
+            document.getElementById('matchDate').value = pitch.date || '';
+            document.getElementById('homeAway').value = pitch.homeAway || 'Away';
+            document.getElementById('opponent').value = pitch.opponent || '';
+            document.getElementById('goalsFor').value = pitch.goalsFor !== null && pitch.goalsFor !== undefined ? pitch.goalsFor : '';
+            document.getElementById('goalsAgainst').value = pitch.goalsAgainst !== null && pitch.goalsAgainst !== undefined ? pitch.goalsAgainst : '';
+            document.getElementById('pinColor').value = pitch.color || config.markerColor;
+            document.getElementById('coords').value = `${pitch.lat.toFixed(5)}, ${pitch.lng.toFixed(5)}`;
+            document.getElementById('pitchNotes').value = pitch.notes || '';
+
+            document.getElementById('editBanner').style.display = 'flex';
+            document.getElementById('submitBtn').innerHTML = '<i class="fa-solid fa-check"></i> Aggiorna Campo';
+            document.getElementById('cancelEditBtn').style.display = 'flex';
+            document.getElementById('tab-btn-add').innerText = 'Modifica Campo';
+
+            switchTab('add');
+        }
+
+        function cancelEdit() {
+            resetFormState();
+        }
+
+        function resetFormState() {
+            document.getElementById('pitchForm').reset();
+            document.getElementById('editingPitchId').value = '';
+            document.getElementById('pinColor').value = config.markerColor;
+            document.getElementById('editBanner').style.display = 'none';
+            document.getElementById('submitBtn').innerHTML = '<i class="fa-solid fa-plus"></i> Salva Campo';
+            document.getElementById('cancelEditBtn').style.display = 'none';
+            document.getElementById('tab-btn-add').innerText = 'Aggiungi Campo';
+        }
+
         function deletePitch(id) {
+            if (!confirm('Sei sicuro di voler eliminare questo campo?')) return;
+            if (document.getElementById('editingPitchId').value === id) {
+                resetFormState();
+            }
             pitches = pitches.filter(p => p.id !== id);
             saveData();
             renderPitches();
@@ -749,7 +953,7 @@
 
         function updateStats() {
             document.getElementById('stat-total').innerText = pitches.length;
-            const wins = pitches.filter(p => p.goalsFor > p.goalsAgainst).length;
+            const wins = pitches.filter(p => p.goalsFor !== null && p.goalsAgainst !== null && p.goalsFor > p.goalsAgainst).length;
             document.getElementById('stat-wins').innerText = wins;
             const goals = pitches.reduce((sum, p) => sum + (p.goalsFor || 0), 0);
             document.getElementById('stat-goals').innerText = goals;
@@ -759,7 +963,7 @@
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.getElementById('tab-add').style.display = tab === 'add' ? 'block' : 'none';
             document.getElementById('tab-list').style.display = tab === 'list' ? 'block' : 'none';
-            event?.target?.classList.add('active');
+            document.getElementById(`tab-btn-${tab}`).classList.add('active');
         }
 
         function useCurrentLocation() {
@@ -809,6 +1013,9 @@
             config.markerColor = document.getElementById('markerColorInput').value;
             config.lineColor = document.getElementById('lineColorInput').value;
             config.apiKey = document.getElementById('apiKeyInput').value;
+            if (!document.getElementById('editingPitchId').value) {
+                document.getElementById('pinColor').value = config.markerColor;
+            }
             saveData();
             renderPitches();
         }
